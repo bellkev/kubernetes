@@ -1,0 +1,76 @@
+machine:
+  environment:
+    GOPATH: /home/ubuntu/go
+    ROOT: ../go/src/github.com/GoogleCloudPlatform/kubernetes
+    GO_TEST_PARALLELISM: 4
+dependencies:
+  cache_directories:
+    - ~/custom-go-versions
+  override:
+    - ./hack/circle/ensure-go-versions.sh 1.3 1.4
+    - |
+      case $CIRCLE_NODE_INDEX in
+        [0-4])
+          ./hack/circle/select-go-version.sh 1.3
+          ./hack/circle/set-env.sh KUBE_TEST_API_VERSIONS v1beta3
+          ;;
+        [5-9])
+          ./hack/circle/select-go-version.sh 1.4
+          ./hack/circle/set-env.sh KUBE_TEST_API_VERSIONS v1beta1
+          ;;
+      esac
+    - |
+      case $CIRCLE_NODE_INDEX in
+        [0-3])
+          ./hack/circle/set-env.sh GO_TEST_INDEX $CIRCLE_NODE_INDEX
+          ./hack/circle/set-env.sh PARALLEL_GO_TEST y
+          ;;
+        [5-8])
+          ./hack/circle/set-env.sh GO_TEST_INDEX $(($CIRCLE_NODE_INDEX - 5))
+          ./hack/circle/set-env.sh PARALLEL_GO_TEST y
+          ;;
+      esac
+    - mkdir -p $ROOT
+    - cp -r . $ROOT
+    - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi:
+        pwd: $ROOT
+    - go get -u github.com/jstemmer/go-junit-report:
+        pwd: $ROOT
+    - go get github.com/bellkev/goveralls:
+        pwd: $ROOT
+    - ./hack/circle/install-etcd.sh:
+        pwd: $ROOT
+    - ./hack/verify-gofmt.sh:
+        pwd: $ROOT
+    - ./hack/verify-boilerplate.sh:
+        pwd: $ROOT
+    - ./hack/verify-description.sh:
+        pwd: $ROOT
+    - ./hack/circle/install-std-race.sh:
+        pwd: $ROOT
+    - ./hack/build-go.sh:
+        pwd: $ROOT
+    - go install ./...:
+        pwd: $ROOT
+        environment:
+          GOPATH: $PWD/Godeps/_workspace:$GOPATH
+    - ./hack/verify-gendocs.sh:
+        pwd: $ROOT
+        environment:
+          PATH: $HOME/gopath/bin:./third_party/etcd:$PATH
+test:
+  override:
+    - ./hack/circle/test.sh:
+        pwd: $ROOT
+        parallel: true
+        environment:
+          COVER_PROFILE: coverage.out
+          COVER_REPORT_DIR_LOC: /tmp/coverage_profile_loc
+          KUBE_TEST_API_VERSIONS: $KUBE_TEST_API_VERSIONS
+    - ./hack/report-coverage.sh:
+        pwd: $ROOT
+        environment:
+          COVER_PROFILE: coverage.out
+          COVER_REPORT_DIR_LOC: /tmp/coverage_profile_loc
+          KUBE_GOVERALLS_BIN: $GOPATH/bin/goveralls
+          PATH: $GOPATH/bin:$PATH
