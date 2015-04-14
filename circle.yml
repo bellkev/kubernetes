@@ -74,3 +74,4 @@ test:
           COVER_REPORT_DIR_LOC: /tmp/coverage_profile_loc
           KUBE_GOVERALLS_BIN: $GOPATH/bin/goveralls
           PATH: $GOPATH/bin:$PATH
+
