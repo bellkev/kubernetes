@@ -121,7 +121,7 @@ func TestDetectImagesWithNewImage(t *testing.T) {
 	err := manager.detectImages(zero)
 	assert := assert.New(t)
 	require.NoError(t, err)
-	assert.Equal(manager.imageRecordsLen(), 7)
+	assert.Equal(manager.imageRecordsLen(), 2)
 
 	// Add a new image.
 	fakeDocker.Images = []docker.APIImages{
